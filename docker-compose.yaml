@@ -1,0 +1,30 @@
+services:
+
+  dagster:
+    build:
+      context: ./dagster_orchestrator
+    container_name: dagster_orchestrator
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock 
+    ports:
+      - "3000:3000"
+    env_file: .env
+    command: ["dagster", "dev", "-f", "definitions.py", "-h", "0.0.0.0", "-p", "3000"]
+
+  fitbit-extractor:
+    build:
+      context: ./extract
+    image: fitbit-extractor:latest
+    profiles: ["build-only"]
+
+  dbt-runner:
+    build:
+      context: ./dbt-project
+    image: dbt-runner:latest
+    profiles: ["build-only"]
+
+  soda-runner:
+    build:
+      context: ./soda
+    image: soda-runner:latest
+    profiles: ["build-only"]
