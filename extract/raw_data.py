@@ -1,4 +1,5 @@
 import os
+import json
 from datetime import datetime, timedelta, timezone
 
 import requests
@@ -17,17 +18,30 @@ GOOGLE_REFRESH_TOKEN = os.environ["GOOGLE_REFRESH_TOKEN"]
 SNOWFLAKE_CONFIG = {
     "account": os.environ["SNOWFLAKE_ACCOUNT"],
     "user": os.environ["SNOWFLAKE_USER"],
+    "role": os.environ["SNOWFLAKE_ROLE"] if "SNOWFLAKE_ROLE" in os.environ else None,
     "password": os.environ["SNOWFLAKE_PASSWORD"],
     "warehouse": os.environ["SNOWFLAKE_WAREHOUSE"],
     "database": os.environ["SNOWFLAKE_DATABASE"],
     "schema": os.environ["SNOWFLAKE_SCHEMA"],
 }
 
+
 DATA_TYPES = {
-    "steps": "activity_and_fitness",
-    "heart-rate": "health_metrics_and_measurements",
-    "sleep": "sleep",
+    "steps": "interval",
+    "heart-rate": "sample",
+    "sleep": "session",
 }
+
+
+def build_filter(data_type_path: str, record_type: str, start: str, end: str) -> str:
+    filter_key = data_type_path.replace("-", "_")
+    if record_type == "session":
+        field = f"{filter_key}.interval.end_time"
+    elif record_type == "interval":
+        field = f"{filter_key}.interval.start_time"
+    else:
+        field = f"{filter_key}.sample_time.physical_time"
+    return f'{field} >= "{start}" AND {field} < "{end}"'
 
 
 def get_credentials() -> Credentials:
@@ -44,12 +58,16 @@ def get_credentials() -> Credentials:
     return creds
 
 
-def fetch_data_type(session: requests.Session, data_type: str, start: str, end: str) -> dict:
+def fetch_data_type(
+    session: requests.Session, data_type: str, record_type: str, start: str, end: str
+) -> dict:
     """Usa la operación 'reconcile', que devuelve los datos ya normalizados
     entre dispositivos (recomendado sobre 'list' según la doc de la API)."""
     url = f"{HEALTH_API_BASE}/{data_type}/dataPoints:reconcile"
-    params = {"startTime": start, "endTime": end}
+    params = {"filter": build_filter(data_type, record_type, start, end)}
     response = session.get(url, params=params, timeout=30)
+    if not response.ok:
+        print(f"Google Health API error body for {data_type}: {response.text}")
     response.raise_for_status()
     return response.json()
 
@@ -76,8 +94,11 @@ def load_raw_table(cursor, table_name: str, fetch_date: str, payload: str) -> No
 
 def main():
     with open_dagster_pipes() as pipes:
-        target_date = pipes.get_extra("target_date") or str(
-            (datetime.now(timezone.utc) - timedelta(days=1)).date()
+        raw_target_date = pipes.get_extra("target_date")
+        target_date = (
+            raw_target_date
+            if isinstance(raw_target_date, str)
+            else str((datetime.now(timezone.utc) - timedelta(days=1)).date())
         )
         start = f"{target_date}T00:00:00Z"
         end = f"{target_date}T23:59:59Z"
@@ -92,10 +113,10 @@ def main():
 
         rows_loaded = {}
         try:
-            for data_type in DATA_TYPES:
+            for data_type, record_type in DATA_TYPES.items():
                 pipes.log.info(f"Fetching data type: {data_type}")
-                data = fetch_data_type(session, data_type, start, end)
-                load_raw_table(cursor, data_type, target_date, str(data).replace("'", "''"))
+                data = fetch_data_type(session, data_type, record_type, start, end)
+                load_raw_table(cursor, data_type, target_date, json.dumps(data))
                 rows_loaded[data_type] = 1
             conn.commit()
         except Exception as e:
