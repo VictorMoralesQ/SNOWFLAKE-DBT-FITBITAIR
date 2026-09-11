@@ -1,0 +1,42 @@
+version: 2
+
+models:
+  - name: dim_date
+    description: "Date dimension across all fetched days."
+    columns:
+      - name: date_key
+        tests:
+          - unique
+          - not_null
+
+  - name: dim_device
+    description: "Device / data source dimension."
+    columns:
+      - name: device_key
+        tests:
+          - unique
+          - not_null
+
+  - name: fact_daily_steps
+    description: "Daily step totals per device."
+    columns:
+      - name: date_key
+        tests:
+          - not_null
+      - name: total_steps
+        tests:
+          - not_null
+
+  - name: fact_heart_rate_samples
+    description: "Raw heart rate sample values with time and device."
+    columns:
+      - name: date_key
+        tests:
+          - not_null
+
+  - name: fact_sleep_sessions
+    description: "Sleep sessions with summary via device."
+    columns:
+      - name: date_key
+        tests:
+          - not_null
