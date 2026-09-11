@@ -24,7 +24,7 @@ def fitbit_raw(context: AssetExecutionContext, docker_pipes_client: PipesDockerC
     """Extrae datos de la Google Health API y los carga en la capa RAW de Snowflake."""
     return docker_pipes_client.run(
         image="fitbit-extractor:latest",
-        command=["python", "fetch_data.py"],
+        command=["python", "raw_data.py"],
         env={**SNOWFLAKE_ENV, **GOOGLE_ENV},
         context=context,
     ).get_results()
