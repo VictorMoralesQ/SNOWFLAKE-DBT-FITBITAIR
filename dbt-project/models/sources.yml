@@ -1,0 +1,14 @@
+version: 2
+
+sources:
+  - name: fitbit_raw
+    description: "Raw layer tables loaded by the extractor from the Google Health API."
+    database: "{{ env_var('SNOWFLAKE_DATABASE') }}"
+    schema: "{{ env_var('SNOWFLAKE_SCHEMA') }}"
+    tables:
+      - name: raw_steps
+        description: "Reconciled steps data points."
+      - name: raw_heart_rate
+        description: "Reconciled heart rate data points."
+      - name: raw_sleep
+        description: "Reconciled sleep sessions data points."
