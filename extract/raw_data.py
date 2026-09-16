@@ -1,5 +1,6 @@
 import os
 import json
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
 import requests
@@ -11,18 +12,40 @@ from google.oauth2.credentials import Credentials
 HEALTH_API_BASE = "https://health.googleapis.com/v4/users/me/dataTypes"
 TOKEN_URI = "https://oauth2.googleapis.com/token"
 
-GOOGLE_CLIENT_ID = os.environ["GOOGLE_CLIENT_ID"]
-GOOGLE_CLIENT_SECRET = os.environ["GOOGLE_CLIENT_SECRET"]
-GOOGLE_REFRESH_TOKEN = os.environ["GOOGLE_REFRESH_TOKEN"]
+
+
+SECRETS_DIR = Path("secrets")
+
+
+def load_secrets() -> dict[str, str]:
+    """Read all secrets/*.txt files into a dict."""
+    secrets = {}
+    if SECRETS_DIR.is_dir():
+        for file in SECRETS_DIR.glob("*.txt"):
+            secrets[file.stem.upper()] = file.read_text().strip()
+    return secrets
+
+
+def get_secret(name: str, secrets: dict[str, str]) -> str:
+    """Prefer the file-based secret, falling back to the environment (e.g. when run inside a container)."""
+    return secrets[name] if name in secrets else os.environ[name]
+
+
+secrets = load_secrets()
+
+GOOGLE_CLIENT_ID = get_secret("GOOGLE_CLIENT_ID", secrets)
+GOOGLE_CLIENT_SECRET = get_secret("GOOGLE_CLIENT_SECRET", secrets)
+GOOGLE_REFRESH_TOKEN = get_secret("GOOGLE_REFRESH_TOKEN", secrets)
+sf_pass = get_secret("SNOWFLAKE_PASSWORD", secrets)
 
 SNOWFLAKE_CONFIG = {
     "account": os.environ["SNOWFLAKE_ACCOUNT"],
     "user": os.environ["SNOWFLAKE_USER"],
     "role": os.environ["SNOWFLAKE_ROLE"] if "SNOWFLAKE_ROLE" in os.environ else None,
-    "password": os.environ["SNOWFLAKE_PASSWORD"],
+    "password": sf_pass,
     "warehouse": os.environ["SNOWFLAKE_WAREHOUSE"],
     "database": os.environ["SNOWFLAKE_DATABASE"],
-    "schema": os.environ["SNOWFLAKE_SCHEMA"],
+    "schema": os.environ["SNOWFLAKE_SCHEMA_RAW"] if "SNOWFLAKE_SCHEMA_RAW" in os.environ else None,
 }
 
 
