@@ -5,7 +5,8 @@ services:
       context: ./dagster_orchestrator
     container_name: dagster_orchestrator
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock 
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./secrets:/opt/dagster/app/secrets:ro 
     ports:
       - "3000:3000"
     env_file: .env
