@@ -4,7 +4,7 @@ sources:
   - name: fitbit_raw
     description: "Raw layer tables loaded by the extractor from the Google Health API."
     database: "{{ env_var('SNOWFLAKE_DATABASE') }}"
-    schema: "{{ env_var('SNOWFLAKE_SCHEMA') }}"
+    schema: "{{ env_var('SNOWFLAKE_SCHEMA_RAW') }}"
     tables:
       - name: raw_steps
         description: "Reconciled steps data points."
