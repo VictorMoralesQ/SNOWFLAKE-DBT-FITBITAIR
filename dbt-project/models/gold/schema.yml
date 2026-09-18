@@ -9,13 +9,6 @@ models:
           - unique
           - not_null
 
-  - name: dim_device
-    description: "Device / data source dimension."
-    columns:
-      - name: device_key
-        tests:
-          - unique
-          - not_null
 
   - name: fact_daily_steps
     description: "Daily step totals per device."
