@@ -1,0 +1,5 @@
+requests==2.32.3
+google-auth==2.35.0
+snowflake-connector-python==3.12.3
+dagster-pipes==1.9.9
+ 

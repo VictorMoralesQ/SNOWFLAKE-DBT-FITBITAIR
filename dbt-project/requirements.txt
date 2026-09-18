@@ -1,0 +1,2 @@
+dbt-snowflake==1.8.4
+dagster-pipes==1.9.9
