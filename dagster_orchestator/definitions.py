@@ -1,21 +1,43 @@
 import os
+from pathlib import Path
 
 from dagster import AssetExecutionContext, Definitions, asset
 from dagster_docker import PipesDockerClient
 
+SECRETS_DIR = Path("secrets")
+
+
+def load_secrets() -> dict[str, str]:
+    """Read all secrets/*.txt files into a dict."""
+    secrets = {}
+    if SECRETS_DIR.is_dir():
+        for file in SECRETS_DIR.glob("*.txt"):
+            secrets[file.stem.upper()] = file.read_text().strip()
+    return secrets
+
+
+def get_secret(name: str, secrets: dict[str, str]) -> str:
+    """Prefer the file-based secret, falling back to the environment."""
+    return secrets[name] if name in secrets else os.environ[name]
+
+
+secrets = load_secrets()
 
 SNOWFLAKE_ENV = {
     "SNOWFLAKE_ACCOUNT": os.environ["SNOWFLAKE_ACCOUNT"],
     "SNOWFLAKE_USER": os.environ["SNOWFLAKE_USER"],
-    "SNOWFLAKE_PASSWORD": os.environ["SNOWFLAKE_PASSWORD"],
+    "SNOWFLAKE_PASSWORD": get_secret("SNOWFLAKE_PASSWORD", secrets),
     "SNOWFLAKE_WAREHOUSE": os.environ["SNOWFLAKE_WAREHOUSE"],
     "SNOWFLAKE_DATABASE": os.environ["SNOWFLAKE_DATABASE"],
-    "SNOWFLAKE_SCHEMA": os.environ["SNOWFLAKE_SCHEMA"],
+    "SNOWFLAKE_ROLE": os.environ["SNOWFLAKE_ROLE"],
+    "SNOWFLAKE_SCHEMA_RAW": os.environ["SNOWFLAKE_SCHEMA_RAW"],
+    "SNOWFLAKE_SCHEMA_SILVER": os.environ["SNOWFLAKE_SCHEMA_SILVER"],
+    "SNOWFLAKE_SCHEMA_GOLD": os.environ["SNOWFLAKE_SCHEMA_GOLD"],
 }
 GOOGLE_ENV = {
-    "GOOGLE_CLIENT_ID": os.environ["GOOGLE_CLIENT_ID"],
-    "GOOGLE_CLIENT_SECRET": os.environ["GOOGLE_CLIENT_SECRET"],
-    "GOOGLE_REFRESH_TOKEN": os.environ["GOOGLE_REFRESH_TOKEN"],
+    "GOOGLE_CLIENT_ID": get_secret("GOOGLE_CLIENT_ID", secrets),
+    "GOOGLE_CLIENT_SECRET": get_secret("GOOGLE_CLIENT_SECRET", secrets),
+    "GOOGLE_REFRESH_TOKEN": get_secret("GOOGLE_REFRESH_TOKEN", secrets),
 }
 
 
